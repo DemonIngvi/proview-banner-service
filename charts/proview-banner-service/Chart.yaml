@@ -1,0 +1,10 @@
+apiVersion: v2
+name: proview-banner-service
+description: "ProView banner-service: selects banners from an in-memory pool"
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.29.0-0"
+home: https://github.com/DemonIngvi/proview-banner-service
+sources: [https://github.com/DemonIngvi/proview-banner-service]
+keywords: [proview, advertising]

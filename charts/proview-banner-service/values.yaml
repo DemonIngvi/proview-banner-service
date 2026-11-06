@@ -1,0 +1,100 @@
+# Default values for proview-banner-service.
+
+image:
+  repository: ghcr.io/demoningvi/proview-banner-service
+  tag: ""            # defaults to .Chart.AppVersion
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Ignored when autoscaling.enabled=true.
+replicaCount: 3
+args: []
+
+ports:
+  http: 8080   # public: GET /v1/banner
+  admin: 8081  # internal management API, never expose publicly
+opsPort: 9090  # /healthz /readyz /metrics
+
+env:
+  LOG_LEVEL: info
+  REFRESH_INTERVAL: 10s
+  COUNTRY_HEADER: X-Country
+  CORS_ALLOWED_ORIGINS: "*"
+  TOKEN_KEY_ID: k1
+  SHUTDOWN_DELAY: 5s
+  SHUTDOWN_TIMEOUT: 15s
+
+# Sensitive settings are read from a Secret.
+secret:
+  existingSecret: ""   # recommended in production
+  keys: [POSTGRES_DSN, TOKEN_SECRET, ADMIN_TOKEN]
+  values: {}           # dev only: rendered into a Secret when existingSecret is empty
+
+# Extra env vars from other Secrets: [{name, secretName, key}]
+extraSecretEnv: []
+
+migrations:
+  enabled: true
+  # Use "post-install,pre-upgrade" when the database credentials Secret is
+  # created by an operator in the same release (it does not exist pre-install).
+  hooks: pre-install,pre-upgrade
+
+service:
+  type: ClusterIP
+
+# ~20k RPS needs ~3-4 cores in total (see proview-docs, capacity plan);
+# HPA keeps headroom for spikes and node loss.
+resources:
+  requests: { cpu: 250m, memory: 64Mi }
+  limits: { cpu: "1", memory: 256Mi }
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 30
+  targetCPUUtilizationPercentage: 60
+
+podDisruptionBudget:
+  enabled: true
+  maxUnavailable: 1
+
+terminationGracePeriodSeconds: 30
+
+serviceAccount:
+  create: true
+  name: ""
+
+ingress:
+  enabled: false
+  className: nginx
+  servicePort: http
+  annotations: {}
+  hosts:
+    - host: ads.proview.local
+      paths:
+        - path: /v1/banner
+          pathType: Prefix
+  tls: []
+
+serviceMonitor:
+  enabled: false
+  interval: 15s
+
+networkPolicy:
+  enabled: false
+  from:
+    http: []    # empty = allow from anywhere (ingress controller)
+    admin:
+      - podSelector:
+          matchLabels:
+            app.kubernetes.io/part-of: proview
+    ops: []
+
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+volumes: []
+volumeMounts: []
